@@ -1,0 +1,2 @@
+It is a sequential move game. One player places a block, another player places the following block. Whoever completes the rows gets the points for that completion. 
+can just have a variable called turn and change it based on the number of blocks in the list blockss. Like whenever there is a odd block it's player 1 etc. 

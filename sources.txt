@@ -1,0 +1,7 @@
+https://www.w3docs.com/snippets/java/how-to-add-an-image-to-a-jpanel.html
+
+https://docs.oracle.com/javase/8/docs/api/java/awt/Image.html
+
+https://mixkit.co/free-sound-effects/click/ for click sound.
+
+
