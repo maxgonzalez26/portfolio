@@ -1,0 +1,12 @@
+name: Application
+title: Application
+username: mgonzalez26
+account: mgonzalez26
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 10369292
+bundleId: 7873528
+url: https://mgonzalez26.shinyapps.io/Application/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

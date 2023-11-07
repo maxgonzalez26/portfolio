@@ -1,0 +1,134 @@
+---
+title: "STAT 231 PUG Shiny Project"
+author: "Ethan Van De Water, Maximo Gonzalez, Alex Nichols"
+date: "2023-10-17"
+format: pdf
+---
+
+```{r include=FALSE}
+knitr::opts_chunk$set(eval = TRUE, message = FALSE)
+
+# improve digit and NA display 
+options(scipen = 1, knitr.kable.NA = '')
+
+# Load Packages
+library(tidyverse)
+library(kableExtra)
+library(lubridate)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(rvest)
+library(purrr)
+library(robotstxt)
+library(readxl)
+```
+
+\newpage
+# Data Wrangling
+
+
+```{r}
+
+######Dataset1-Ethan######################################
+df1 <- read_excel("data/NHA_indicators.xlsx") #created my own dataset using the WHO website for covid-19 data, the originial file was in need of some wrangling to get it into a usable format. 
+
+df2 <- df1[-1, , drop = FALSE] |> # get rid of first row
+  
+  #change columns from characters to numberic
+  mutate(across(c("2000", "2001","2002","2003","2004","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019"), as.numeric)) |>
+  rowwise() |>
+  #calculate mean row-wise
+  mutate(AvgExpenditurePreCovid2019 = mean(c_across("2000":"2019"), na.rm = TRUE))|>
+  rename(Expenditure2020 = "2020")
+  
+df3 <- df2 |>
+  rowwise() |>
+  mutate(Expenditure2020 = as.numeric(Expenditure2020))|>
+  mutate(SpendingDifference = Expenditure2020 - AvgExpenditurePreCovid2019)
+
+#select useful columns and rename
+df4 <- df3 |>
+  select(Countries, Indicators, AvgExpenditurePreCovid2019, Expenditure2020, SpendingDifference)|>
+  rename(SpendingDifference2020Other = "SpendingDifference", "CHE as % GDP" = "Indicators", country = "Countries")
+
+df4$country[df4$country == "Russian Federation"] <- "Russia"
+df4$country[df4$country == "Iran (Islamic Republic of)"] <- "Iran"
+
+
+#Dataset2################################################################################################
+
+che_import <- read_excel("data/HealthExpenditure.XLSX")
+
+che_wrangled1 <- che_import %>%
+  select(country, income, year, che)
+
+filtered_data <- che_wrangled1 %>%
+  filter(year >= 2000 & year <= 2019 | year >= 2020 & year <= 2021)
+
+# Calculate the average che for each country and time period
+che_wrangled2 <- filtered_data %>%
+  group_by(country, income) %>%
+  summarize(
+    avg_che_2000_to_2019 = mean(che[year >= 2000 & year <= 2019]),
+    avg_che_2020_to_2021 = mean(che[year >= 2020 & year <= 2021])
+  ) %>%
+  ungroup()
+  
+che_wrangled3 <- che_wrangled2 %>%
+  mutate(diff_2020_to_2021_vs_2000_to_2019 = avg_che_2020_to_2021 - avg_che_2000_to_2019)
+
+#Dataset3################################################################################################
+
+covid_deaths_url <-"https://en.wikipedia.org/wiki/COVID-19_pandemic_death_rates_by_country" #get url
+robotstxt::paths_allowed(covid_deaths_url) #web scraping allowed
+
+covid_deaths <- covid_deaths_url |>              
+  read_html() |>
+  html_table() |>
+  pluck(2)
+
+covid_deaths1 <- covid_deaths |>
+  rename_at(2, ~ "Deaths_per_M") |>
+  rename_at(3, ~ "Deaths1") |>
+  rename_at(4, ~ "Cases1")
+
+#getting rid of all the things that have a comma for some reason because they can't be converted easily.
+covid_deaths2 <- covid_deaths1|>
+   mutate(across(c("Deaths_per_M", "Deaths1", "Cases1"), ~as.numeric(gsub(",", "", .)))) |>
+  rename(country = "Country")
+
+covid_deaths2$country[covid_deaths2$country == "United States"] <- "United States of America"
+covid_deaths2$country[covid_deaths2$country == "China[c]"] <- "China"
+
+
+  
+
+
+#Dataset4################################################################################################
+
+gdp_import <- read_excel("data/GDP_data.XLSX")
+
+gdp_wrangled1 <- gdp_import %>%
+  select(country, year, gdp_pc_usd)
+
+# Calculate the average che for each country and time period
+gdp_wrangled2 <- gdp_wrangled1 %>%
+  group_by(country) %>%
+  summarize(
+    avg_gdp = mean(gdp_pc_usd[year >= 2000 & year <= 2019])
+  ) %>%
+  ungroup()
+
+
+#Joining based on country to see what we have thus far
+
+result <- inner_join(df4, covid_deaths2, by = "country") |>
+          left_join(che_wrangled3, by = "country") |>
+          left_join(gdp_wrangled2, by = "country")
+
+saveRDS(result, file = "Application/data/result.Rds")#Save Resulting Dataset
+
+```
+
+
